@@ -51,13 +51,14 @@ def similarity_score(word, cards):
 
 #algo only gets 0.4 with itself
 #TODO get more than 1 result
-def card_sim(cardname, cards):
+def card_sim(cardname, cards, howmuch):
 	card_text = cards[cardname]['text']
 	qwords = set(get_words(card_text)) #words in query card
+	card_vec = dict()
 
-	max_csim = 0.0
-	candidate = 'None'
+	total_cards = len(cards)
 	for ind, (cmpname, cmpcard) in enumerate(cards.iteritems()):
+		logging.info("\r{0}".format((float(ind)/total_cards)*100))
 		if cmpname == cardname:
 			continue
 		cmp_words = get_words(cmpcard['text'])
@@ -80,11 +81,12 @@ def card_sim(cardname, cards):
 		logging.debug('cmp_vec %s'% str(cmp_vec))
 		csim = cosine_sim(w2, query_vec, cmp_vec)
 		logging.debug('cosine sim: %f' % csim)
-		if csim > max_csim:
-			max_csim = csim
-			candidate = cmpname
-	
-	logging.info('best match: %s' % candidate)
+		card_vec[cmpname] = csim
+
+	for ind, entry in enumerate(sorted(card_vec, key=card_vec.get, reverse=True)):
+		if ind > howmuch:
+			exit()
+		logging.info('match: %s | score: %f'  % (entry, card_vec[entry]))
 
 
 def cosine_sim(keys, dct1, dct2):
@@ -121,6 +123,6 @@ if __name__ == '__main__':
 		for mtgset in sets:
 			cards.update(load_set(mtgset))
 
-	card_sim(args.card, cards)
+	card_sim(args.card, cards, 10)
 
 #TODO refactor all these terrible variable names
