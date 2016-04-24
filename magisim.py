@@ -6,6 +6,8 @@ import argparse
 import re
 from scipy import spatial
 
+from tqdm import tqdm
+
 
 #in case we want to include the "whole" cardpool
 legacy = ['10E', '9ED', 'BFZ', 'DKA', 'GPT', 'LEA', 'M14', 'OGW', 'RAV', 'THS', 'WWK', '2ED', 'ALA', 'BNG', 'DRK', 'GTC', 'LEB', 'MBS', 'ONS', 'ROE', 'TMP', 'ZEN', '3ED', 'ALL', 'BOK', 'DST', 'HML', 'LEG', 'MIR', 'ORI', 'RTR', 'TOR', '4ED', 'APC', 'CHK', 'DTK', 'ICE', 'LGN', 'MMQ', 'PCY', 'SCG', 'TSP', '5DN', 'ARB', 'CHR', 'EVE', 'INV', 'LRW', 'MOR', 'PLC', 'SHM', 'UDS', '5ED', 'ARN', 'CON', 'EXO', 'ISD', 'M10', 'MRD', 'PLS', 'SOI', 'ULG', '6ED', 'ATH', 'CSP', 'FEM', 'JOU', 'M11', 'NMS', 'PO2', 'SOK', 'USG', '7ED', 'ATQ', 'DGM', 'FRF', 'JUD', 'M12', 'NPH', 'POR', 'SOM', 'VIS', '8ED', 'AVR', 'DIS', 'FUT', 'KTK', 'M13', 'ODY', 'PTK', 'STH', 'WTH']
@@ -49,16 +51,13 @@ def similarity_score(word, cards):
 	return TFIDF
 
 
-#algo only gets 0.4 with itself
-#TODO get more than 1 result
 def card_sim(cardname, cards, howmuch):
 	card_text = cards[cardname]['text']
 	qwords = set(get_words(card_text)) #words in query card
 	card_vec = dict()
 
 	total_cards = len(cards)
-	for ind, (cmpname, cmpcard) in enumerate(cards.iteritems()):
-		logging.info("\r{0}".format((float(ind)/total_cards)*100))
+	for ind, (cmpname, cmpcard) in enumerate(tqdm(cards.items())):
 		if cmpname == cardname:
 			continue
 		cmp_words = get_words(cmpcard['text'])
@@ -85,7 +84,7 @@ def card_sim(cardname, cards, howmuch):
 
 	for ind, entry in enumerate(sorted(card_vec, key=card_vec.get, reverse=True)):
 		if ind > howmuch:
-			exit()
+			return
 		logging.info('match: %s | score: %f'  % (entry, card_vec[entry]))
 
 
