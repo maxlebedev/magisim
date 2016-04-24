@@ -6,3 +6,4 @@ Example usage:
 python magisim.py -c "Fiery Temper" -s 'SOI ORI OGW'
 
 Where SOI.json and the rest are json files from http://mtgjson.com/
+They should all be placed in ./sets/

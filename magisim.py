@@ -13,9 +13,10 @@ legacy = ['10E', '9ED', 'BFZ', 'DKA', 'GPT', 'LEA', 'M14', 'OGW', 'RAV', 'THS', 
 modern = ['SOI', 'OGW', 'BFZ', 'ORI', 'DTK', 'FRF', 'KTK', 'M15', 'JOU', 'BNG', 'THS', 'M14', 'DGM', 'GTC', 'RTR', 'M13', 'AVR', 'DKA', 'ISD', 'M12', 'NPH', 'MBS', 'SOM', 'M11', 'ROE', 'WWK', 'ZEN', 'M10', 'ARB', 'CON', 'ALA', 'EVE', 'SHM', 'MOR', 'LRW', '10E', 'FUT', 'PLC', 'TSP', 'CSP', 'DIS', 'GPT', 'RAV', '9ED', 'SOK', 'BOK', 'CHK', '5DN', 'DST', 'MRD', '8ED']
 
 
+memo = dict()
+
 def get_words(text):
     return re.compile('\w+').findall(text)
-
 
 #loads a set
 def load_set(mtgset):
@@ -31,6 +32,8 @@ def load_set(mtgset):
 
 #TODO care about parts of cards 'sfor' matching 'transform' etc
 def similarity_score(word, cards):
+	if word in memo:
+		return memo[word]
 	card_tot = len(cards)
 	TF = 0 #num card with word
 	logging.debug('getting TFIDF for %s'% word)
@@ -42,11 +45,10 @@ def similarity_score(word, cards):
 	logging.debug('IDF %f'% IDF)
 	TFIDF = TF * IDF
 	logging.debug('TFIDF %f'% TFIDF)
+	memo[word] = TFIDF
 	return TFIDF
 
 
-
-#TODO better name
 #algo only gets 0.4 with itself
 #TODO get more than 1 result
 def card_sim(cardname, cards):
@@ -68,12 +70,12 @@ def card_sim(cardname, cards):
 		for word in w2:
 			query_vec[word] = 0
 			cmp_vec[word] = 0
-			tfidf = similarity_score(word,cards) #TODO this bit can be memoized
+			tfidf = similarity_score(word,cards) 
 			if word in card_text:
 				query_vec[word] = tfidf
 			if word in cmpcard['text']:
 				cmp_vec[word] = tfidf
-		#now everything is formatted right for cosine similarity
+
 		logging.debug('query_vec %s'% str(query_vec))
 		logging.debug('cmp_vec %s'% str(cmp_vec))
 		csim = cosine_sim(w2, query_vec, cmp_vec)
@@ -122,4 +124,3 @@ if __name__ == '__main__':
 	card_sim(args.card, cards)
 
 #TODO refactor all these terrible variable names
-
