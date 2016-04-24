@@ -4,6 +4,10 @@ import logging
 import sys
 import argparse
 
+
+#in case we want to include the "whole" cardpool
+all_sets = ['10E', '9ED', 'BFZ', 'DKA', 'GPT', 'LEA', 'M14', 'OGW', 'RAV', 'THS', 'WWK', '2ED', 'ALA', 'BNG', 'DRK', 'GTC', 'LEB', 'MBS', 'ONS', 'ROE', 'TMP', 'ZEN', '3ED', 'ALL', 'BOK', 'DST', 'HML', 'LEG', 'MIR', 'ORI', 'RTR', 'TOR', '4ED', 'APC', 'CHK', 'DTK', 'ICE', 'LGN', 'MMQ', 'PCY', 'SCG', 'TSP', '5DN', 'ARB', 'CHR', 'EVE', 'INV', 'LRW', 'MOR', 'PLC', 'SHM', 'UDS', '5ED', 'ARN', 'CON', 'EXO', 'ISD', 'M10', 'MRD', 'PLS', 'SOI', 'ULG', '6ED', 'ATH', 'CSP', 'FEM', 'JOU', 'M11', 'NMS', 'PO2', 'SOK', 'USG', '7ED', 'ATQ', 'DGM', 'FRF', 'JUD', 'M12', 'NPH', 'POR', 'SOM', 'VIS', '8ED', 'AVR', 'DIS', 'FUT', 'KTK', 'M13', 'ODY', 'PTK', 'STH', 'WTH']
+
 #loads all cards. Deprecated?
 #TODO is there a difference isn the DS depending on how we load?
 def load_cards():
@@ -18,7 +22,7 @@ def load_cards():
 
 #loads a set
 def load_set(mtgset):
-	cards = open('/Users/maxlebedev/SWDev/Magisim/%s.json'%mtgset).readlines()
+	cards = open('/Users/maxlebedev/SWDev/magisim/sets/%s.json'%mtgset).readlines()
 	cards = json.loads(cards[0])['cards']
 	real_cards = dict() #'real' card shave card text, removes vanilla
 	for card in cards:
@@ -29,7 +33,7 @@ def load_set(mtgset):
 
 
 #TODO care about parts of cards 'sfor' matching 'transform' etc
-def similiarity_score(word, cards):
+def similarity_score(word, cards):
 	card_tot = len(cards)
 	TF = 0 #num card with word
 	logging.debug('getting TFIDF for %s'% word)
@@ -48,6 +52,7 @@ def similiarity_score(word, cards):
 
 #find most similar card by total minimum IDF
 #TODO implement the rest of cosine similarity
+#TODO  num is the number of items to print??
 def card_sim(cardname, cards):
 	max_sim = 0
 	closest_card = 'None'
@@ -58,11 +63,13 @@ def card_sim(cardname, cards):
 		for word in cards[cardname]['text'].split():
 			if word.lower() in cmpcard['text'].lower():
 				sim += similarity_score(word,cards)
+
 		if max_sim < sim and cmpcard['name'] != cardname:
 			max_sim = sim
 			closest_card = cmpcard['name']
 	logging.info('max_sim %f'% max_sim)
 	logging.info('closest card %s'% closest_card)
+
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
@@ -76,7 +83,10 @@ if __name__ == '__main__':
 		lvl = logging.INFO
 	logging.basicConfig(stream=sys.stderr, level=lvl)
 	if args.sets:#if sets are specified, use only those sets
-		sets = args.sets.split()
+		if args.sets.lower() == 'all':
+			sets = all_sets
+		else:
+			sets = args.sets.split()
 		cards = dict()
 		for mtgset in sets:
 			cards.update(load_set(mtgset))
