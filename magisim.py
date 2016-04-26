@@ -7,6 +7,9 @@ import re
 from tqdm import tqdm
 from scipy import spatial
 
+from stemming.porter2 import stem
+
+
 #ideally we could care about cards legal in formats, but meh
 
 #in case we want to include the "whole" cardpool
@@ -28,6 +31,7 @@ def load_set(mtgset):
 	for card in cards:
 		if card.get('text'):
 			logging.debug('name:: %s', card['name'])
+			card['text'] = stem(card['text'])
 			real_cards[card['name']] = card
 	return real_cards
 
@@ -98,17 +102,21 @@ def cosine_sim(keys, dct1, dct2):
 	res = 1 - spatial.distance.cosine(lst1, lst2)
 	return res
 
+#main loop
+#def main(cards):
+
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-v", '--verbose', action="store_true", help="Verbose output")
-	parser.add_argument("-c", '--card', action="store", help="Verbose output")
+	#parser.add_argument("-c", '--card', action="store", help="Verbose output")
 	parser.add_argument("-s", '--sets', action="store", help="3 letter codes for sets")
+	parser.add_argument("-n", '--num', action="store", help="number of results to show")
 	args = parser.parse_args()
+
+	lvl = logging.INFO
 	if args.verbose:
 		lvl = logging.DEBUG
-	else:
-		lvl = logging.INFO
 	logging.basicConfig(stream=sys.stderr, level=lvl)
 	if args.sets:#if sets are specified, use only those sets
 		if args.sets.lower() == 'legacy':
@@ -120,7 +128,23 @@ if __name__ == '__main__':
 		cards = dict()
 		for mtgset in sets:
 			cards.update(load_set(mtgset))
-
-	card_sim(args.card, cards, 10)
+	num_res = 10
+	if args.num:
+		num_res = int(args.num)
+	
+	#done = False
+	while True:
+		card = raw_input('Please enter a card name:')
+		if card = 'exit':
+			break
+		try:
+			card_sim(card, cards, num_res)
+		except Keyerror:
+			continue
 
 #TODO refactor all these terrible variable names
+
+# This is more correct for longer text. Reach Through Mists and the like don't do well
+#TODO reminder text screws with things
+
+#Cardnames should maybe be case insensitive
