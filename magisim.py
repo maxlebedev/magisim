@@ -119,7 +119,7 @@ if __name__ == '__main__':
 		lvl = logging.DEBUG
 	logging.basicConfig(stream=sys.stderr, level=lvl)
 	if args.sets:#if sets are specified, use only those sets
-		if args.sets.lower() == 'legacy':
+		if args.sets.lower() == 'legacy' or args.sets.lower() = 'all':
 			sets = legacy
 		elif args.sets.lower() == 'modern':
 			sets = modern
@@ -145,6 +145,7 @@ if __name__ == '__main__':
 #TODO refactor all these terrible variable names
 
 # This is more correct for longer text. Reach Through Mists and the like don't do well
+
 #TODO reminder text screws with things
 
 #Cardnames should maybe be case insensitive
