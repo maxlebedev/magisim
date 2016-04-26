@@ -31,12 +31,13 @@ def load_set(mtgset):
 	for card in cards:
 		if card.get('text'):
 			logging.debug('name:: %s', card['name'])
+			#txt = re.sub(r'\([^)]*\)', '', card['text'])#remove all reminder text
+			# I wonder why this messes things up
 			card['text'] = stem(card['text'])
 			real_cards[card['name']] = card
 	return real_cards
 
 
-#TODO care about parts of cards 'sfor' matching 'transform' etc
 def similarity_score(word, cards):
 	if word in memo:
 		return memo[word]
@@ -46,11 +47,9 @@ def similarity_score(word, cards):
 	for card in cards.keys():
 		if word.lower() in cards[card]['text'].lower():
 			TF += 1.0
-	logging.debug('Term Frequency %d', TF)
 	IDF = math.log(card_tot/TF)
-	logging.debug('IDF %f', IDF)
 	TFIDF = TF * IDF
-	logging.debug('TFIDF %f', TFIDF)
+	logging.debug('TF: %d| IDF: %f| TFIDF %f',TF, IDF, TFIDF)
 	memo[word] = TFIDF
 	return TFIDF
 
@@ -86,6 +85,7 @@ def card_sim(cardname, cards, howmuch):
 		logging.debug('cosine sim: %f', csim)
 		card_vec[cmpname] = csim
 
+	#separate function
 	for ind, entry in enumerate(sorted(card_vec, key=card_vec.get, reverse=True)):
 		if ind > howmuch:
 			return
@@ -102,14 +102,22 @@ def cosine_sim(keys, dct1, dct2):
 	res = 1 - spatial.distance.cosine(lst1, lst2)
 	return res
 
+
 #main loop
-#def main(cards):
+def repl(cards, num_res):
+	while True:
+		card = raw_input('Please enter a card name:')
+		if card == 'exit':
+			break
+		try:
+			card_sim(card, cards, num_res)
+		except Keyerror:
+			continue
 
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-v", '--verbose', action="store_true", help="Verbose output")
-	#parser.add_argument("-c", '--card', action="store", help="Verbose output")
 	parser.add_argument("-s", '--sets', action="store", help="3 letter codes for sets")
 	parser.add_argument("-n", '--num', action="store", help="number of results to show")
 	args = parser.parse_args()
@@ -119,7 +127,7 @@ if __name__ == '__main__':
 		lvl = logging.DEBUG
 	logging.basicConfig(stream=sys.stderr, level=lvl)
 	if args.sets:#if sets are specified, use only those sets
-		if args.sets.lower() == 'legacy' or args.sets.lower() = 'all':
+		if args.sets.lower() == 'legacy' or args.sets.lower() == 'all':
 			sets = legacy
 		elif args.sets.lower() == 'modern':
 			sets = modern
@@ -131,21 +139,14 @@ if __name__ == '__main__':
 	num_res = 10
 	if args.num:
 		num_res = int(args.num)
+	repl(cards, num_res)
 	
-	#done = False
-	while True:
-		card = raw_input('Please enter a card name:')
-		if card = 'exit':
-			break
-		try:
-			card_sim(card, cards, num_res)
-		except Keyerror:
-			continue
-
+#TODO reminder text screws with things. Why?
 #TODO refactor all these terrible variable names
+#TODO care about parts of cards 'sfor' matching 'transform' etc
+#TODO 2 card mode where we get deets on the matching
 
 # This is more correct for longer text. Reach Through Mists and the like don't do well
 
-#TODO reminder text screws with things
-
-#Cardnames should maybe be case insensitive
+#about stemming.. it might be worth to see the stemmed output of cards
+# do we want ngrams?
