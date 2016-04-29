@@ -30,11 +30,13 @@ def load_set(mtgset):
 	real_cards = dict() #'real' card shave card text, removes vanilla
 	for card in cards:
 		if card.get('text'):
-			logging.debug('name:: %s', card['name'])
+			cardname = card['name']
+			logging.debug('name:: %s',cardname )
+			txt = card['text'].replace(cardname, '~') #replace mentions of the name with ~
 			#txt = re.sub(r'\([^)]*\)', '', card['text'])#remove all reminder text
 			# I wonder why this messes things up
-			card['text'] = stem(card['text'])
-			real_cards[card['name']] = card
+			card['text'] = stem(txt)
+			real_cards[cardname] = card
 	return real_cards
 
 
@@ -52,6 +54,7 @@ def similarity_score(word, cards):
 	logging.debug('TF: %d| IDF: %f| TFIDF %f',TF, IDF, TFIDF)
 	memo[word] = TFIDF
 	return TFIDF
+
 
 
 #TODO break up into 2 functions
@@ -85,11 +88,14 @@ def card_sim(cardname, cards, howmuch):
 		logging.debug('cosine sim: %f', csim)
 		card_vec[cmpname] = csim
 
+	print_top_n(card_vec, howmuch)
+
+def print_top_n(cards, n):
 	#separate function
-	for ind, entry in enumerate(sorted(card_vec, key=card_vec.get, reverse=True)):
-		if ind > howmuch:
+	for ind, entry in enumerate(sorted(cards, key=cards.get, reverse=True)):
+		if ind > n:
 			return
-		logging.info('match: %s | score: %f', entry, card_vec[entry])
+		logging.info('match: %s | score: %f', entry, cards[entry])
 
 
 def cosine_sim(keys, dct1, dct2):
@@ -111,8 +117,10 @@ def repl(cards, num_res):
 			break
 		try:
 			card_sim(card, cards, num_res)
-		except Keyerror:
+		except KeyError:
 			continue
+
+
 
 
 if __name__ == '__main__':
@@ -148,5 +156,4 @@ if __name__ == '__main__':
 
 # This is more correct for longer text. Reach Through Mists and the like don't do well
 
-#about stemming.. it might be worth to see the stemmed output of cards
 # do we want ngrams?
