@@ -40,7 +40,7 @@ def load_set(mtgset):
 	return real_cards
 
 
-def similarity_score(word, cards):
+def tfidf_word(word, cards):
 	if word in memo:
 		return memo[word]
 	card_tot = len(cards)
@@ -56,39 +56,54 @@ def similarity_score(word, cards):
 	return TFIDF
 
 
+def comp(cards, all_words, card1, card2):
+	query_vec = dict()
+	cmp_vec = dict()
 
-#TODO break up into 2 functions
-def card_sim(cardname, cards, howmuch):
-	card_text = cards[cardname]['text']
-	qwords = set(get_words(card_text)) #words in query card
-	card_vec = dict()
+	logging.debug('all_words: %s', str(all_words))
+	for word in all_words:
+		query_vec[word] = 0
+		cmp_vec[word] = 0
+		tfidf = tfidf_word(word, cards)
+		if word in card1['text']:
+			query_vec[word] = tfidf
+		if word in card2['text']:
+			cmp_vec[word] = tfidf
+
+	logging.debug('query_vec %s', str(query_vec))
+	logging.debug('cmp_vec %s', str(cmp_vec))
+	return query_vec, cmp_vec
+
+
+def compare_two(card, card1, card2):
+	qwords = set(get_words(cards[card1]['text'])) #words in query card
+	cmp_words = set(get_words(cards[card2]['text']))
+	all_words = qwords | cmp_words
+	cd1_vec, cd2_vec = comp(cards, all_words, cards[card1], cards[card2])
+
+	logging.info('card1: %s \n card2: %s', qwords, cmp_words)
+
+	csim = cosine_sim(all_words, cd1_vec, cd2_vec)
+	logging.info('cosine similarity: %f', csim)
+
+
+def get_sim_dict(cardname, cards):
+	qwords = set(get_words(cards[cardname]['text'])) #words in query card
+	similarity_dict = dict()
 
 	for ind, (cmpname, cmpcard) in enumerate(tqdm(cards.items())):
 		if cmpname == cardname:
 			continue
 		cmp_words = get_words(cmpcard['text'])
 		w2 = qwords | set(cmp_words)
-		query_vec = dict()
-		cmp_vec = dict()
 
-		logging.debug('w2: %s', str(w2))
-		logging.debug('cmp_words: %s', str(cmp_words))
-		for word in w2:
-			query_vec[word] = 0
-			cmp_vec[word] = 0
-			tfidf = similarity_score(word, cards)
-			if word in card_text:
-				query_vec[word] = tfidf
-			if word in cmpcard['text']:
-				cmp_vec[word] = tfidf
-
-		logging.debug('query_vec %s', str(query_vec))
-		logging.debug('cmp_vec %s', str(cmp_vec))
+		query_vec, cmp_vec = comp(cards, w2, cards[cardname], cards[cmpname])
 		csim = cosine_sim(w2, query_vec, cmp_vec)
 		logging.debug('cosine sim: %f', csim)
-		card_vec[cmpname] = csim
+		similarity_dict[cmpname] = csim
 
-	print_top_n(card_vec, howmuch)
+	return similarity_dict
+
 
 def print_top_n(cards, n):
 	#separate function
@@ -116,11 +131,10 @@ def repl(cards, num_res):
 		if card == 'exit':
 			break
 		try:
-			card_sim(card, cards, num_res)
+			sim_dict = get_sim_dict(card, cards)
+			print_top_n(sim_dict, num_res)
 		except KeyError:
 			continue
-
-
 
 
 if __name__ == '__main__':
@@ -128,6 +142,7 @@ if __name__ == '__main__':
 	parser.add_argument("-v", '--verbose', action="store_true", help="Verbose output")
 	parser.add_argument("-s", '--sets', action="store", help="3 letter codes for sets")
 	parser.add_argument("-n", '--num', action="store", help="number of results to show")
+	parser.add_argument("-c", '--cmp2', action="store", help="Compare 2 cards mode")
 	args = parser.parse_args()
 
 	lvl = logging.INFO
@@ -147,7 +162,11 @@ if __name__ == '__main__':
 	num_res = 10
 	if args.num:
 		num_res = int(args.num)
-	repl(cards, num_res)
+	if args.cmp2:
+		c1, c2 = args.cmp2.split('|')
+		compare_two(sets, c1, c2)
+	else:
+		repl(cards, num_res)
 	
 #TODO reminder text screws with things. Why?
 #TODO refactor all these terrible variable names
