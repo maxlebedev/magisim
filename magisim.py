@@ -17,17 +17,22 @@ legacy = ['10E', '9ED', 'BFZ', 'DKA', 'GPT', 'LEA', 'M14', 'OGW', 'RAV', 'THS', 
 
 modern = ['SOI', 'OGW', 'BFZ', 'ORI', 'DTK', 'FRF', 'KTK', 'M15', 'JOU', 'BNG', 'THS', 'M14', 'DGM', 'GTC', 'RTR', 'M13', 'AVR', 'DKA', 'ISD', 'M12', 'NPH', 'MBS', 'SOM', 'M11', 'ROE', 'WWK', 'ZEN', 'M10', 'ARB', 'CON', 'ALA', 'EVE', 'SHM', 'MOR', 'LRW', '10E', 'FUT', 'PLC', 'TSP', 'CSP', 'DIS', 'GPT', 'RAV', '9ED', 'SOK', 'BOK', 'CHK', '5DN', 'DST', 'MRD', '8ED']
 
+#stop_words = ['of', 'the', 'a', 'an', 'it']
+stop_words = []
+
 
 memo = dict()
 
 def get_words(text):
-	return re.compile(r'\w+').findall(text)
+	wlist = re.compile(r'\w+').findall(text)
+	wlist = [value for value in wlist if value not in stop_words]
+	return wlist
 
 #loads a set
 def load_set(mtgset):
 	cards = open('sets/%s.json'%mtgset).readlines()
 	cards = json.loads(cards[0])['cards']
-	real_cards = dict() #'real' card shave card text, removes vanilla
+	real_cards = dict() #'real' cards have card text, if a card does not have rules text, it is pointless to care about it
 	for card in cards:
 		if card.get('text'):
 			cardname = card['name']
@@ -40,15 +45,14 @@ def load_set(mtgset):
 	return real_cards
 
 
-def tfidf_word(word, cards):
+def tfidf_word(word, cards, cardtext):
 	if word in memo:
 		return memo[word]
 	card_tot = len(cards)
 	TF = 0 #num card with word
 	logging.debug('getting TFIDF for %s', word)
-	for card in cards.keys():
-		if word.lower() in cards[card]['text'].lower():
-			TF += 1.0
+
+	TF = cardtext.count(word)
 	IDF = math.log(card_tot/TF)
 	TFIDF = TF * IDF
 	logging.debug('TF: %d| IDF: %f| TFIDF %f',TF, IDF, TFIDF)
@@ -56,7 +60,7 @@ def tfidf_word(word, cards):
 	return TFIDF
 
 
-def comp(cards, all_words, card1, card2):
+def comp(cards, all_words, card1, card2):#cards are dicts here
 	query_vec = dict()
 	cmp_vec = dict()
 
@@ -64,18 +68,17 @@ def comp(cards, all_words, card1, card2):
 	for word in all_words:
 		query_vec[word] = 0
 		cmp_vec[word] = 0
-		tfidf = tfidf_word(word, cards)
 		if word in card1['text']:
-			query_vec[word] = tfidf
+			query_vec[word] = tfidf_word(word, cards, card1['text'])
 		if word in card2['text']:
-			cmp_vec[word] = tfidf
+			cmp_vec[word] = tfidf_word(word, cards, card2['text'])
 
 	logging.debug('query_vec %s', str(query_vec))
 	logging.debug('cmp_vec %s', str(cmp_vec))
 	return query_vec, cmp_vec
 
 
-def compare_two(card, card1, card2):
+def compare_two(cards, card1, card2):
 	qwords = set(get_words(cards[card1]['text'])) #words in query card
 	cmp_words = set(get_words(cards[card2]['text']))
 	all_words = qwords | cmp_words
@@ -84,7 +87,14 @@ def compare_two(card, card1, card2):
 	logging.info('card1: %s \n card2: %s', qwords, cmp_words)
 
 	csim = cosine_sim(all_words, cd1_vec, cd2_vec)
-	logging.info('cosine similarity: %f', csim)
+	logging.info('cosine similarity: %f\n', csim)
+	logging.info('common words:\n')
+
+	for word in qwords:
+		if word in cmp_words:
+			logging.info(word)
+			
+	
 
 
 def get_sim_dict(cardname, cards):
@@ -130,6 +140,10 @@ def repl(cards, num_res):
 		card = raw_input('Please enter a card name:')
 		if card == 'exit':
 			break
+		if card[0] == '!':
+			c1, c2 = card[1:].split('|')
+			compare_two(cards, c1, c2)
+
 		try:
 			sim_dict = get_sim_dict(card, cards)
 			print_top_n(sim_dict, num_res)
