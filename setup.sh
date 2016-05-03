@@ -6,3 +6,4 @@ do
 	wget http://mtgjson.com/json/$set.json.zip;
 	unzip $set.json.zip -d sets/$set.json;
 done
+rm *.json.zip
