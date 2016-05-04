@@ -2,8 +2,10 @@
 A primitive MTG card text similarity tool
 
 
-Example usage:
-python magisim.py  -s 'all'
+Example usage:  
+
+python magisim.py  -s 'all' -n 20  
+
 Please enter a card name:Lightning Bolt
 
 Where SOI.json and the rest are json files from http://mtgjson.com/
