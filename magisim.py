@@ -9,6 +9,9 @@ from scipy import spatial
 
 from stemming.porter2 import stem
 
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 #ideally we could care about cards legal in formats, but meh
 
@@ -20,11 +23,10 @@ modern = ['SOI', 'OGW', 'BFZ', 'ORI', 'DTK', 'FRF', 'KTK', 'M15', 'JOU', 'BNG', 
 #stop_words = ['of', 'the', 'a', 'an', 'it']
 stop_words = []
 
-
 memo = dict()
 
 def get_words(text):
-	wlist = re.compile(r'\w+').findall(text)
+	wlist = re.compile(r'\w+').findall(text) #maybe we want to treat all mana costs the same?
 	wlist = [value for value in wlist if value not in stop_words]
 	return wlist
 
@@ -84,7 +86,8 @@ def compare_two(cards, card1, card2):
 	all_words = qwords | cmp_words
 	cd1_vec, cd2_vec = comp(cards, all_words, cards[card1], cards[card2])
 
-	logging.info('card1: %s \n card2: %s', qwords, cmp_words)
+	logging.info('\ncard1: %s \n card2: %s', qwords, cmp_words)
+	logging.info('\ncard1 vector: %s \n card2 vector: %s', cd1_vec, cd2_vec)
 
 	csim = cosine_sim(all_words, cd1_vec, cd2_vec)
 	logging.info('cosine similarity: %f\n', csim)
@@ -93,8 +96,28 @@ def compare_two(cards, card1, card2):
 	for word in qwords:
 		if word in cmp_words:
 			logging.info(word)
-			
 	
+
+def sklearn(cards, card):
+	txtlst = list()
+	names = list()
+	for i, (c,v) in enumerate(cards.items()):
+                if card.lower() == c.lower():
+                    card = c
+		txtlst.append(v['text'])
+		names.append(c)
+	crdind = names.index(card)
+
+	tfidf_vectorizer = TfidfVectorizer(token_pattern='\w+')
+	tfidf_matrix = tfidf_vectorizer.fit_transform(txtlst)
+
+	csim = cosine_similarity(tfidf_matrix[crdind:crdind+1], tfidf_matrix)[0]
+
+	simdict = dict()
+	for i in range(len(names)):
+		simdict[names[i]] = csim[i]
+
+	return simdict
 
 
 def get_sim_dict(cardname, cards):
@@ -138,17 +161,21 @@ def cosine_sim(keys, dct1, dct2):
 def repl(cards, num_res):
 	while True:
 		card = raw_input('Please enter a card name:')
+                if not card:
+                        continue
 		if card == 'exit':
 			break
 		if card[0] == '!':
 			c1, c2 = card[1:].split('|')
 			compare_two(cards, c1, c2)
-
-		try:
-			sim_dict = get_sim_dict(card, cards)
-			print_top_n(sim_dict, num_res)
-		except KeyError:
-			continue
+                else:
+                    try:
+                            sim_dict = sklearn(cards, card)
+                            #sim_dict = get_sim_dict(card, cards)
+                            print_top_n(sim_dict, num_res)
+                    except Exception as e:
+                            logging.info(e)
+                            continue
 
 
 if __name__ == '__main__':
@@ -182,11 +209,12 @@ if __name__ == '__main__':
 	else:
 		repl(cards, num_res)
 	
-#TODO reminder text screws with things. Why?
+#TODO reminder text screws with things. It takes up more space thana keyword.
+    # Maybe all keywords should be expanded, but then they would all be too heavily weighed
 #TODO refactor all these terrible variable names
 #TODO care about parts of cards 'sfor' matching 'transform' etc
 #TODO 2 card mode where we get deets on the matching
 
 # This is more correct for longer text. Reach Through Mists and the like don't do well
-
 # do we want ngrams?
+
