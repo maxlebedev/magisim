@@ -40,63 +40,10 @@ def load_set(mtgset):
 			cardname = card['name']
 			logging.debug('name:: %s',cardname )
 			txt = card['text'].replace(cardname, '~') #replace mentions of the name with ~
-			#txt = re.sub(r'\([^)]*\)', '', card['text'])#remove all reminder text
-			# I wonder why this messes things up
 			card['text'] = stem(txt)
 			real_cards[cardname] = card
 	return real_cards
 
-
-def tfidf_word(word, cards, cardtext):
-	if word in memo:
-		return memo[word]
-	card_tot = len(cards)
-	TF = 0 #num card with word
-	logging.debug('getting TFIDF for %s', word)
-
-	TF = cardtext.count(word)
-	IDF = math.log(card_tot/TF)
-	TFIDF = TF * IDF
-	logging.debug('TF: %d| IDF: %f| TFIDF %f',TF, IDF, TFIDF)
-	memo[word] = TFIDF
-	return TFIDF
-
-
-def comp(cards, all_words, card1, card2):#cards are dicts here
-	query_vec = dict()
-	cmp_vec = dict()
-
-	logging.debug('all_words: %s', str(all_words))
-	for word in all_words:
-		query_vec[word] = 0
-		cmp_vec[word] = 0
-		if word in card1['text']:
-			query_vec[word] = tfidf_word(word, cards, card1['text'])
-		if word in card2['text']:
-			cmp_vec[word] = tfidf_word(word, cards, card2['text'])
-
-	logging.debug('query_vec %s', str(query_vec))
-	logging.debug('cmp_vec %s', str(cmp_vec))
-	return query_vec, cmp_vec
-
-
-def compare_two(cards, card1, card2):
-	qwords = set(get_words(cards[card1]['text'])) #words in query card
-	cmp_words = set(get_words(cards[card2]['text']))
-	all_words = qwords | cmp_words
-	cd1_vec, cd2_vec = comp(cards, all_words, cards[card1], cards[card2])
-
-	logging.info('\ncard1: %s \n card2: %s', qwords, cmp_words)
-	logging.info('\ncard1 vector: %s \n card2 vector: %s', cd1_vec, cd2_vec)
-
-	csim = cosine_sim(all_words, cd1_vec, cd2_vec)
-	logging.info('cosine similarity: %f\n', csim)
-	logging.info('common words:\n')
-
-	for word in qwords:
-		if word in cmp_words:
-			logging.info(word)
-	
 
 def sklearn(cards, card):
 	txtlst = list()
@@ -116,26 +63,7 @@ def sklearn(cards, card):
 	simdict = dict()
 	for i in range(len(names)):
 		simdict[names[i]] = csim[i]
-
 	return simdict
-
-
-def get_sim_dict(cardname, cards):
-	qwords = set(get_words(cards[cardname]['text'])) #words in query card
-	similarity_dict = dict()
-
-	for ind, (cmpname, cmpcard) in enumerate(tqdm(cards.items())):
-		if cmpname == cardname:
-			continue
-		cmp_words = get_words(cmpcard['text'])
-		w2 = qwords | set(cmp_words)
-
-		query_vec, cmp_vec = comp(cards, w2, cards[cardname], cards[cmpname])
-		csim = cosine_sim(w2, query_vec, cmp_vec)
-		logging.debug('cosine sim: %f', csim)
-		similarity_dict[cmpname] = csim
-
-	return similarity_dict
 
 
 def print_top_n(cards, n):
@@ -171,7 +99,6 @@ def repl(cards, num_res):
                 else:
                     try:
                             sim_dict = sklearn(cards, card)
-                            #sim_dict = get_sim_dict(card, cards)
                             print_top_n(sim_dict, num_res)
                     except Exception as e:
                             logging.info(e)
@@ -183,7 +110,6 @@ if __name__ == '__main__':
 	parser.add_argument("-v", '--verbose', action="store_true", help="Verbose output")
 	parser.add_argument("-s", '--sets', action="store", help="3 letter codes for sets")
 	parser.add_argument("-n", '--num', action="store", help="number of results to show")
-	parser.add_argument("-c", '--cmp2', action="store", help="Compare 2 cards mode")
 	args = parser.parse_args()
 
 	lvl = logging.INFO
@@ -209,12 +135,9 @@ if __name__ == '__main__':
 	else:
 		repl(cards, num_res)
 	
-#TODO reminder text screws with things. It takes up more space thana keyword.
-    # Maybe all keywords should be expanded, but then they would all be too heavily weighed
+#TODO long/complicated keywords are weighted too highly
 #TODO refactor all these terrible variable names
-#TODO care about parts of cards 'sfor' matching 'transform' etc
-#TODO 2 card mode where we get deets on the matching
+#TODO 2 card mode where we get deets on the matching. maybe
 
-# This is more correct for longer text. Reach Through Mists and the like don't do well
 # do we want ngrams?
 
