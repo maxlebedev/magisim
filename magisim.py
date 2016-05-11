@@ -98,7 +98,7 @@ def repl(cards, num_res):
 			compare_two(cards, c1, c2)
                 else:
                     try:
-                            sim_dict = sklearn(cards, card)
+                            sim_dict = sklearn(cards, card.strip())
                             print_top_n(sim_dict, num_res)
                     except Exception as e:
                             logging.info(e)
@@ -129,11 +129,7 @@ if __name__ == '__main__':
 	num_res = 10
 	if args.num:
 		num_res = int(args.num)
-	if args.cmp2:
-		c1, c2 = args.cmp2.split('|')
-		compare_two(sets, c1, c2)
-	else:
-		repl(cards, num_res)
+        repl(cards, num_res)
 	
 #TODO long/complicated keywords are weighted too highly
 #TODO refactor all these terrible variable names
