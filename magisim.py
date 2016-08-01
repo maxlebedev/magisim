@@ -13,35 +13,44 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-#ideally we could care about cards legal in formats, but meh
-
-#in case we want to include the "whole" cardpool
-legacy = ['10E', '9ED', 'BFZ', 'DKA', 'GPT', 'LEA', 'M14', 'OGW', 'RAV', 'THS', 'WWK', '2ED', 'ALA', 'BNG', 'DRK', 'GTC', 'LEB', 'MBS', 'ONS', 'ROE', 'TMP', 'ZEN', '3ED', 'ALL', 'BOK', 'DST', 'HML', 'LEG', 'MIR', 'ORI', 'RTR', 'TOR', '4ED', 'APC', 'CHK', 'DTK', 'ICE', 'LGN', 'MMQ', 'PCY', 'SCG', 'TSP', '5DN', 'ARB', 'CHR', 'EVE', 'INV', 'LRW', 'MOR', 'PLC', 'SHM', 'UDS', '5ED', 'ARN', 'CON', 'EXO', 'ISD', 'M10', 'MRD', 'PLS', 'SOI', 'ULG', '6ED', 'ATH', 'CSP', 'FEM', 'JOU', 'M11', 'NMS', 'PO2', 'SOK', 'USG', '7ED', 'ATQ', 'DGM', 'FRF', 'JUD', 'M12', 'NPH', 'POR', 'SOM', 'VIS', '8ED', 'AVR', 'DIS', 'FUT', 'KTK', 'M13', 'ODY', 'PTK', 'STH', 'WTH']
-
-modern = ['SOI', 'OGW', 'BFZ', 'ORI', 'DTK', 'FRF', 'KTK', 'M15', 'JOU', 'BNG', 'THS', 'M14', 'DGM', 'GTC', 'RTR', 'M13', 'AVR', 'DKA', 'ISD', 'M12', 'NPH', 'MBS', 'SOM', 'M11', 'ROE', 'WWK', 'ZEN', 'M10', 'ARB', 'CON', 'ALA', 'EVE', 'SHM', 'MOR', 'LRW', '10E', 'FUT', 'PLC', 'TSP', 'CSP', 'DIS', 'GPT', 'RAV', '9ED', 'SOK', 'BOK', 'CHK', '5DN', 'DST', 'MRD', '8ED']
 
 #stop_words = ['of', 'the', 'a', 'an', 'it']
 stop_words = []
 
 memo = dict()
 
+def construct_unique_phrase_list():
+    #code snippet that word2vec's phrase tool and collects all the uniques.
+    # The goal here is to place these phrases in the cardtext at some point
+    inp = open('/Users/maxlebedev/SWDev/DeckBuilder/phrases', 'r')
+    inp = inp.readlines()
+    out = out = open('/Users/maxlebedev/SWDev/DeckBuilder/uniq_phras', 'w')
+    set_phr = set()
+    for line in inp:
+	words = re.compile(r'[^\s,().]+_[^\s,().]+').findall(line)
+	for word in words:
+		if word not in set_phr:
+			out.write(word+'\n')
+			set_phr.update({word})
+
+
+
 def get_words(text):
-	wlist = re.compile(r'\w+').findall(text) #maybe we want to treat all mana costs the same?
+	wlist = re.compile(r'\w+_?\w*').findall(text) #maybe we want to treat all mana costs the same?
 	wlist = [value for value in wlist if value not in stop_words]
 	return wlist
 
 #loads a set
-def load_set(mtgset):
-	cards = open('sets/%s.json'%mtgset).readlines()
-	cards = json.loads(cards[0])['cards']
+def load_set():
+        cards = open('AllCards.json').readlines()
+	cards = json.loads(cards[0])
 	real_cards = dict() #'real' cards have card text, if a card does not have rules text, it is pointless to care about it
-	for card in cards:
-		if card.get('text'):
-			cardname = card['name']
+	for cardname, etc in cards.iteritems():
+		if 'text' in etc:
 			logging.debug('name:: %s',cardname )
-			txt = card['text'].replace(cardname, '~') #replace mentions of the name with ~
-			card['text'] = stem(txt)
-			real_cards[cardname] = card
+			txt = etc['text'].replace(cardname, '~') #replace mentions of the name with ~
+                        etc['text'] = stem(txt)
+			real_cards[cardname] = etc
 	return real_cards
 
 
@@ -93,9 +102,6 @@ def repl(cards, num_res):
                         continue
 		if card == 'exit':
 			break
-		if card[0] == '!':
-			c1, c2 = card[1:].split('|')
-			compare_two(cards, c1, c2)
                 else:
                     try:
                             sim_dict = sklearn(cards, card.strip())
@@ -116,16 +122,8 @@ if __name__ == '__main__':
 	if args.verbose:
 		lvl = logging.DEBUG
 	logging.basicConfig(stream=sys.stderr, level=lvl)
-	if args.sets:#if sets are specified, use only those sets
-		if args.sets.lower() == 'legacy' or args.sets.lower() == 'all':
-			sets = legacy
-		elif args.sets.lower() == 'modern':
-			sets = modern
-		else:
-			sets = args.sets.split()
-		cards = dict()
-		for mtgset in sets:
-			cards.update(load_set(mtgset))
+        cards = dict()
+        cards.update(load_set()) #mtgset being AllCards
 	num_res = 10
 	if args.num:
 		num_res = int(args.num)
