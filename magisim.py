@@ -19,12 +19,13 @@ stop_words = []
 
 memo = dict()
 
-def construct_unique_phrase_list():
+# '/Users/maxlebedev/SWDev/DeckBuilder/phrases', '/Users/maxlebedev/SWDev/DeckBuilder/uniq_phras'
+def construct_unique_phrase_list(phr_path, output):
     #code snippet that word2vec's phrase tool and collects all the uniques.
     # The goal here is to place these phrases in the cardtext at some point
-    inp = open('/Users/maxlebedev/SWDev/DeckBuilder/phrases', 'r')
+    inp = open(phr_path, 'r')
     inp = inp.readlines()
-    out = out = open('/Users/maxlebedev/SWDev/DeckBuilder/uniq_phras', 'w')
+    out = open(output, 'w')
     set_phr = set()
     for line in inp:
 	words = re.compile(r'[^\s,().]+_[^\s,().]+').findall(line)
@@ -32,7 +33,6 @@ def construct_unique_phrase_list():
 		if word not in set_phr:
 			out.write(word+'\n')
 			set_phr.update({word})
-
 
 
 def get_words(text):
@@ -114,7 +114,6 @@ def repl(cards, num_res):
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-v", '--verbose', action="store_true", help="Verbose output")
-	parser.add_argument("-s", '--sets', action="store", help="3 letter codes for sets")
 	parser.add_argument("-n", '--num', action="store", help="number of results to show")
 	args = parser.parse_args()
 
